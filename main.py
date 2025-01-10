@@ -30,10 +30,13 @@ def handle_location(update: Update, context: CallbackContext):
     location = update.message.location
     lat = location.latitude
     lon = location.longitude
-    url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=metric&lang=uk&appid={OWM_API_KEY}
+    url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=metric&lang=uk&appid={OWM_API_KEY}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
         city_name = data["name"]
         temp = data["main"]["temp"]
         weather_desc = data["weather"][0]["description"]
+        update.message.reply_text(f"Погода в {city_name}: {temp}°C, {weather_desc.capitalize()}")
+    else:
+        update.message.reply_text("Не вдалося отримати погоду за вашою геопозицією.")
