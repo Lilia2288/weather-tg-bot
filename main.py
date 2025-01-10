@@ -1,5 +1,5 @@
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import requests
 
 OWM_API_KEY = "38ca48c0966459cb26384fd8e3b549c4"
@@ -15,18 +15,17 @@ def get_weather(city: str):
         weather_desc = data["weather"][0]["description"]
         return f"Погода в {city_name}: {temp}°C, {weather_desc.capitalize()}"
     else:
-        return "Не вдалося визначити погоду міста, перевірте назву міста"
-    
+        return "Не вдалося знайти інформацію про погоду. Перевірте назву міста."
 
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [KeyboardButton("Передати геопозицію", request_location=True)],
         [KeyboardButton("Ввести місто вручну")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    update.message.reply_text("Привіт! Виберіть опцію:", reply_markup=reply_markup)
+    await update.message.reply_text("Привіт! Виберіть опцію:", reply_markup=reply_markup)
 
-def handle_location(update: Update, context: CallbackContext):
+async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     location = update.message.location
     lat = location.latitude
     lon = location.longitude
@@ -37,6 +36,23 @@ def handle_location(update: Update, context: CallbackContext):
         city_name = data["name"]
         temp = data["main"]["temp"]
         weather_desc = data["weather"][0]["description"]
-        update.message.reply_text(f"Погода в {city_name}: {temp}°C, {weather_desc.capitalize()}")
+        await update.message.reply_text(f"Погода в {city_name}: {temp}°C, {weather_desc.capitalize()}")
     else:
-        update.message.reply_text("Не вдалося отримати погоду за вашою геопозицією.")
+        await update.message.reply_text("Не вдалося отримати погоду за вашою геопозицією.")
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    city = update.message.text
+    weather = get_weather(city)
+    await update.message.reply_text(weather)
+
+def main():
+    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.LOCATION, handle_location))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
